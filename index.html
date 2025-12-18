@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cowboy Christmas Raffle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&family=Rye&display=swap" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        overflow-x: hidden;
+      }
+      /* Custom Animations */
+      @keyframes snowfall {
+        0% { transform: translateY(-10vh) translateX(0); opacity: 1; }
+        100% { transform: translateY(110vh) translateX(20px); opacity: 0.3; }
+      }
+      .snowflake {
+        position: fixed;
+        top: -10vh;
+        z-index: 1;
+        color: #87CEEB; /* Sky Blue to be visible on white background */
+        pointer-events: none;
+        animation-name: snowfall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+      }
+      
+      .font-rye { font-family: 'Rye', serif; }
+      .font-christmas { font-family: 'Mountains of Christmas', serif; }
+      
+      .wood-pattern {
+        background-color: #3e2723;
+        background-image: url("https://www.transparenttextures.com/patterns/wood-pattern.png");
+        /* Fallback if external pattern fails to load */
+        background-size: 200px;
+      }
+
+      .leather-texture {
+        background-color: #5D4037;
+        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E");
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "canvas-confetti": "https://esm.sh/canvas-confetti@^1.9.4"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
