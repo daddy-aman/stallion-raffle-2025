@@ -7,6 +7,21 @@ import ShippingDecorations from './components/ShippingDecorations';
 import { RaffleConfig, WheelItem } from './types';
 import { Star, Trash2 } from 'lucide-react';
 
+let spinSound: HTMLAudioElement | null = null;
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  const silent = new Audio(
+    "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA"
+  );
+
+  silent.play().catch(() => {});
+}
+
+
 const COLORS = [
   '#8B0000', // Dark Red
   '#2E8B57', // Sea Green (softer than forest)
