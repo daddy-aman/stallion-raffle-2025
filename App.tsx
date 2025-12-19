@@ -7,66 +7,99 @@ import ShippingDecorations from './components/ShippingDecorations';
 import { RaffleConfig, WheelItem } from './types';
 import { Star, Trash2 } from 'lucide-react';
 
-/* =========================
-   MOBILE-SAFE AUDIO SETUP
-   ========================= */
+/* =========================================================
+   AUDIO — MOBILE & DESKTOP MATCHING (NO GLITCHES)
+   ========================================================= */
 
-// REAL spin sound
-const SPIN_SFX_URL =
+const SPIN_REEL_URL =
   "https://raw.githubusercontent.com/daddy-aman/stallion-raffle-2025/main/spinning-reel-27903.mp3";
 
-// Tiny silent mp3 ONLY for unlocking iOS audio
+const TICK_URL =
+  "https://raw.githubusercontent.com/daddy-aman/stallion-raffle-2025/main/spinning-roulette-wheel-429832.mp3";
+
+const WIN_URL =
+  "https://raw.githubusercontent.com/daddy-aman/stallion-raffle-2025/main/spinning-reel-27903.mp3"; // use a different win sound if you want
+
+const HORSE_URL =
+  "https://raw.githubusercontent.com/daddy-aman/stallion-raffle-2025/main/horse-neigh-sfx-373051.mp3";
+
 const SILENT_MP3 =
   "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCA";
 
-let spinSound: HTMLAudioElement | null = null;
 let audioUnlocked = false;
-let lastSpinTriggerAt = 0;
+let lastSpinAt = 0;
 
-function unlockAudioOnce() {
+let spinReel: HTMLAudioElement | null = null;
+let tickLoop: HTMLAudioElement | null = null;
+let winSfx: HTMLAudioElement | null = null;
+let horseSfx: HTMLAudioElement | null = null;
+
+function unlockAudioOnce(volume: number) {
   if (audioUnlocked) return;
   audioUnlocked = true;
 
-  // Unlock audio on iOS using SILENT sound
+  // Unlock audio on iOS
   const silent = new Audio(SILENT_MP3);
   silent.play().then(() => {
     silent.pause();
     silent.currentTime = 0;
   }).catch(() => {});
 
-  // Prepare the REAL spin sound (do NOT play yet)
-  spinSound = new Audio(SPIN_SFX_URL);
-  spinSound.preload = "auto";
-  spinSound.load();
+  // Create ALL sounds after user gesture
+  spinReel = new Audio(SPIN_REEL_URL);
+  spinReel.preload = "auto";
+  spinReel.volume = volume;
+
+  tickLoop = new Audio(TICK_URL);
+  tickLoop.preload = "auto";
+  tickLoop.loop = true;
+  tickLoop.volume = Math.min(1, volume + 0.15);
+
+  winSfx = new Audio(WIN_URL);
+  winSfx.preload = "auto";
+  winSfx.volume = volume;
+
+  horseSfx = new Audio(HORSE_URL);
+  horseSfx.preload = "auto";
+  horseSfx.volume = volume;
+
+  spinReel.load();
+  tickLoop.load();
+  winSfx.load();
+  horseSfx.load();
 }
 
-function playSpinSound(volume: number) {
-  if (!spinSound) return;
-
-  spinSound.pause();
-  spinSound.currentTime = 0;
-  spinSound.volume = Math.max(0, Math.min(1, volume));
-
-  spinSound.play().catch(() => {});
+function playOnce(a: HTMLAudioElement | null, volume: number) {
+  if (!a) return;
+  a.pause();
+  a.currentTime = 0;
+  a.volume = Math.max(0, Math.min(1, volume));
+  a.play().catch(() => {});
 }
 
-/* =========================
+function startTick(volume: number) {
+  if (!tickLoop) return;
+  tickLoop.currentTime = 0;
+  tickLoop.volume = Math.max(0, Math.min(1, volume));
+  tickLoop.play().catch(() => {});
+}
+
+function stopTick() {
+  if (!tickLoop) return;
+  tickLoop.pause();
+  tickLoop.currentTime = 0;
+}
+
+/* =========================================================
    UI CONSTANTS
-   ========================= */
+   ========================================================= */
 
-const COLORS = [
-  '#8B0000',
-  '#2E8B57',
-  '#F59E0B',
-  '#A0522D',
-  '#D4AF37'
-];
-
+const COLORS = ['#8B0000', '#2E8B57', '#F59E0B', '#A0522D', '#D4AF37'];
 const TEXT_COLORS = ['#FFFFFF', '#FFFFFF', '#000000', '#FFFFFF', '#000000'];
 
-/* =========================
+/* =========================================================
    APP
-   ========================= */
+   ========================================================= */
 
 const App: React.FC = () => {
   const [config, setConfig] = useState<RaffleConfig>({
@@ -84,66 +117,76 @@ const App: React.FC = () => {
 
   const wheelItems: WheelItem[] = useMemo(() => {
     const items: WheelItem[] = [];
-    let colorIndex = 0;
+    let idx = 0;
 
     for (let i = config.min; i <= config.max; i++) {
       if (!config.excluded.includes(i)) {
         items.push({
           value: i,
-          color: COLORS[colorIndex % COLORS.length],
-          textColor: TEXT_COLORS[colorIndex % COLORS.length],
+          color: COLORS[idx % COLORS.length],
+          textColor: TEXT_COLORS[idx % TEXT_COLORS.length],
         });
-        colorIndex++;
+        idx++;
       }
     }
     return items;
-  }, [config.min, config.max, config.excluded]);
+  }, [config]);
 
-  /* =========================
-     SPIN HANDLER (FIXED)
-     ========================= */
+  /* ======================
+     SPIN
+     ====================== */
 
   const handleSpin = useCallback(() => {
     const now = Date.now();
-    if (now - lastSpinTriggerAt < 350) return; // prevents double-tap glitch
-    lastSpinTriggerAt = now;
+    if (now - lastSpinAt < 400) return; // prevent double-tap
+    lastSpinAt = now;
 
     if (wheelItems.length === 0 || isSpinning) return;
 
-    unlockAudioOnce();
-    playSpinSound(config.volume ?? 0.5);
+    unlockAudioOnce(config.volume);
+
+    playOnce(spinReel, config.volume);
+    startTick(Math.min(1, config.volume + 0.15));
 
     const randomIndex = Math.floor(Math.random() * wheelItems.length);
-    const selectedWinner = wheelItems[randomIndex].value;
+    setWinner(wheelItems[randomIndex].value);
 
     setIsSpinning(true);
-    setWinner(selectedWinner);
     setShowModal(false);
   }, [wheelItems, isSpinning, config.volume]);
 
   const handleSpinEnd = useCallback(() => {
+    stopTick();
+
     setIsSpinning(false);
     setShowModal(true);
     setSpinCount(prev => prev + 1);
-  }, []);
+
+    // Winner sounds (mobile-safe because audio already unlocked)
+    setTimeout(() => {
+      playOnce(winSfx, config.volume);
+      setTimeout(() => playOnce(horseSfx, config.volume), 120);
+    }, 60);
+  }, [config.volume]);
+
+  /* ======================
+     WINNER HANDLING
+     ====================== */
 
   const handleClaimPrize = () => {
     if (winner !== null) {
-      setConfig(prev => ({
-        ...prev,
-        excluded: [...prev.excluded, winner],
-      }));
+      setConfig(prev => ({ ...prev, excluded: [...prev.excluded, winner] }));
       setWinnersHistory(prev => [...prev, winner]);
     }
-    setShowModal(false);
     setWinner(null);
+    setShowModal(false);
   };
 
   const handleResetAndClose = () => {
     setConfig(prev => ({ ...prev, excluded: [] }));
     setWinnersHistory([]);
-    setShowModal(false);
     setWinner(null);
+    setShowModal(false);
   };
 
   const handleResetExcludedExternal = () => {
@@ -152,30 +195,29 @@ const App: React.FC = () => {
   };
 
   const clearWinnersHistory = () => {
-    if (window.confirm("Clear only the history list? (Excluded numbers will remain excluded)")) {
+    if (window.confirm("Clear history only?")) {
       setWinnersHistory([]);
     }
   };
 
+  /* ======================
+     RENDER
+     ====================== */
+
   return (
-    <div className="min-h-screen w-full bg-[#FDD698] text-slate-900 overflow-x-hidden relative flex flex-col font-rye">
+    <div className="min-h-screen bg-[#FDD698] font-rye flex flex-col">
       <ShippingDecorations />
       <Snowfall />
 
-      {/* HEADER */}
-      <div className="pt-6 text-center">
-        <h1 className="text-4xl md:text-7xl text-[#8B0000]">
-          🤠 Stallion Holiday Raffle 🎄
-        </h1>
-        <p className="mt-2 text-xl text-[#8B4513]">
+      <header className="text-center mt-6">
+        <h1 className="text-4xl md:text-7xl text-[#8B0000]">🤠 Stallion Holiday Raffle 🎄</h1>
+        <p className="text-[#8B4513] mt-2 text-xl">
           Spin the wheel for a rootin' tootin' good time!
         </p>
-      </div>
+      </header>
 
-      {/* MAIN */}
-      <div className="flex-1 flex flex-col xl:flex-row items-center justify-center gap-16 px-4 pb-32">
-
-        <div className="scale-[0.55] sm:scale-[0.9] md:scale-100">
+      <main className="flex-1 flex flex-col xl:flex-row items-center justify-center gap-16 px-4 pb-32">
+        <div className="scale-[0.6] sm:scale-[0.9] md:scale-100">
           <Wheel
             items={wheelItems}
             isSpinning={isSpinning}
@@ -201,7 +243,8 @@ const App: React.FC = () => {
               handleSpin();
             }}
             disabled={isSpinning || wheelItems.length === 0}
-            className="bg-[#B91C1C] hover:bg-[#C62828] text-white text-xl px-10 py-3 rounded-full border-4 border-[#D4AF37] shadow-[0_4px_0_#8B0000] active:translate-y-1 transition-all disabled:opacity-50"
+            className="bg-[#B91C1C] text-white px-10 py-3 rounded-full border-4 border-[#D4AF37]
+                       shadow-[0_4px_0_#8B0000] active:translate-y-1 disabled:opacity-50"
           >
             🤠 SPIN THE WHEEL 🤠
           </button>
@@ -210,7 +253,7 @@ const App: React.FC = () => {
             <div className="bg-[#FFF8DC] border-2 border-[#8B4513] rounded-lg p-4 max-w-xs">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-[#8B0000] font-bold">🏆 Winners</h3>
-                <button onClick={clearWinnersHistory} className="text-sm text-red-700">
+                <button onClick={clearWinnersHistory}>
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -224,7 +267,7 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       {showModal && winner !== null && (
         <WinnerModal
@@ -240,3 +283,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
